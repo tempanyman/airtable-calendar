@@ -4,6 +4,10 @@ import './timeline_view.css';
 import EventBar from './eventBar';
 
 export default class TimelineView extends React.Component {
+  state = {
+    rowHeights: this.props.timelineItems.map(x => 0),
+    numRows: this.props.timelineItems.length
+  }
   constructor(props) {
     super(props);
     this.numPixelsPerDay = props.width || 100;
@@ -18,6 +22,16 @@ export default class TimelineView extends React.Component {
     this.timelineEndDate = this.timelineSortedByEndDescending[0].end;
   }
 
+  componentDidMount() {
+    let heights = this.state.rowHeights.map((h, index) => {
+      let idName = "#eventInRow" + index;
+      const nodeArr = [...document.querySelectorAll(idName)];
+      return Math.max.apply(Math, nodeArr.map((node) => node.clientHeight));
+    });
+    this.setState({
+      rowHeights: heights
+    });
+  }
   // most space-efficient way to group bars. //
 
   // helper method
@@ -47,12 +61,13 @@ export default class TimelineView extends React.Component {
   }
 
   // given array of items, create bars.
-  getBars = (timelineItems) => {
+  getBars = (timelineItems, rowIndex) => {
     return timelineItems.map((item) => {
       let pixels = this.getDaysFromStart(item.start) * this.numPixelsPerDay;
       let days = this.getDaysFromStart(item.start) * this;
       return (
-        <div className="event" 
+        <div className="event"
+             id={"eventInRow" + rowIndex} 
              style={{left: pixels}}>
                <EventBar numPixelsPerDay={this.numPixelsPerDay}
                          span={item.span}
@@ -98,11 +113,11 @@ export default class TimelineView extends React.Component {
       let bgc = i % 2 === 0 ? "#ffffff" : "#9999997e";
       return (
       <div 
-                className="row"
-                style={{gridRowStart: i+1, backgroundColor: bgc}}
-              >
-                {this.getBars(row)}
-              </div>)
+        className="row"
+        style={{gridRowStart: i+1, backgroundColor: bgc, height: this.state.rowHeights[i]}}
+      >
+        {this.getBars(row, i)}
+      </div>)
     }
     );
     
@@ -113,5 +128,4 @@ export default class TimelineView extends React.Component {
       </div>
     );
   }
-  
 }
