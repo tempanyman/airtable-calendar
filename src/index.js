@@ -22,7 +22,9 @@ function App() {
   });
   return (
     <div>
-      <TimelineView timelineItems={parseTimelineItems}/>
+      <TimelineView 
+        timelineItems={parseTimelineItems}
+        width={50}/>
     </div>
   );
 };
