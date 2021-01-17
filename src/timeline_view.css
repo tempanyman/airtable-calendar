@@ -1,5 +1,4 @@
 .timeline {
-  overflow: auto;
   display: grid;
   grid-auto-rows: minmax(25px, auto);
   width: fit-content;
