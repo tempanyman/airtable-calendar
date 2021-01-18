@@ -1,0 +1,8 @@
+.event {
+  position: absolute;
+}
+
+.row {
+  display: inline-block;
+  overflow: auto;
+}

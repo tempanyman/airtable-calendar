@@ -1,61 +1,34 @@
 import React from 'react';
 import moment from 'moment';
 import './timeline_view.css';
-import EventBar from './eventBar';
+import Row from './row';
 
 export default class TimelineView extends React.Component {
   state = {
-    rowHeights: this.props.timelineItems.map(x => 0),
     numPixelsPerDay: this.props.width || 100
   }
   constructor(props) {
     super(props);
-    this.timelineItems = props.timelineItems;
-    // sort timeline items 
+    this.timelineItems = props.timelineItems.map((item) => {
+      return ({
+        id: item.id,
+        start: moment(item.start, "YYYY-MM-DD"),
+        end: moment(item.end, "YYYY-MM-DD"),
+        span: moment(item.end, "YYYY-MM-DD").diff(moment(item.start, "YYYY-MM-DD"), 'days') + 1,
+        name: item.name
+      });
+    });
+    // sort timeline items by start date, ascending.
     this.timelineSortedByStart = [...this.timelineItems];
     this.timelineSortedByStart.sort((item1, item2) => item1.start.diff(item2.start));
     this.timelineStartDate = this.timelineSortedByStart[0].start;
-    /////////////////
+    // sort timeline items by end date, descending.
     this.timelineSortedByEndDescending = [...this.timelineItems];
     this.timelineSortedByEndDescending.sort((item1, item2) => item2.end.diff(item1.end));
     this.timelineEndDate = this.timelineSortedByEndDescending[0].end;
   }
 
-  componentDidMount() {
-    let heights = this.state.rowHeights.map((h, index) => {
-      let idName = "#eventInRow" + index;
-      const nodeArr = [...document.querySelectorAll(idName)];
-      return Math.max.apply(Math, nodeArr.map((node) => node.clientHeight));
-    });
-    this.setState({
-      rowHeights: heights
-    });
-  }
-
-  componentDidUpdate(prevProps, prevState) {
-    let heights = this.state.rowHeights.map((h, index) => {
-      let idName = "#eventInRow" + index;
-      let nodeArr = [...document.querySelectorAll(idName)];
-      console.log("noderr = ", nodeArr);
-      let nodeaddlist = nodeArr.map((n) => n.clientHeight);
-      console.log("noderrlist = ", nodeaddlist);
-      let nodeArrMax = Math.max.apply(Math, nodeArr.map((node) => node.clientHeight));
-      return Math.max.apply(Math, nodeArr.map((node) => node.clientHeight));
-    });
-    console.log("old rowheights: " + this.state.rowHeights);
-    console.log("new heights: " + heights);
-    if (JSON.stringify(this.state.rowHeights) !== JSON.stringify(heights)) {
-      console.log("updating!")
-      this.setState({
-        rowHeights: heights
-      });
-      //this.forceUpdate();
-    }
-  }
-
-
-  // most space-efficient way to group bars. //
-
+  /////////// most space-efficient way to group bars. ///////////
   // helper method
   // since items are sorted by start time, item is compatable with row iff row[-1].endTime <= item.startTime.
   getFirstCompatibleRowIndex = (rowsArray, item) => {
@@ -81,26 +54,10 @@ export default class TimelineView extends React.Component {
     });
     return rowsArray;
   }
+  /////////////////////////////////////////////////////////////
 
-  // given array of items, create bars.
-  getBars = (timelineItems, rowIndex) => {
-    return timelineItems.map((item) => {
-      let pixels = this.getDaysFromStart(item.start) * this.state.numPixelsPerDay;
-      return (
-        <div className="event"
-             id={"eventInRow" + rowIndex} 
-             style={{left: pixels}}>
-               <EventBar numPixelsPerDay={this.state.numPixelsPerDay}
-                         span={item.span}
-                         itemName={item.name}/>
-        </div>
-      );
-    });
-  }
-    
-  // onclick event for zoom.
+  ///////// onclick events for zoom. /////////
   zoomIn = () => {
-    console.log("clicked zoomin");
     const newDayPixels = this.state.numPixelsPerDay + 10;
     if (newDayPixels <= 200) {
       this.setState({
@@ -109,7 +66,6 @@ export default class TimelineView extends React.Component {
     }
   }
   zoomOut = () => {
-    console.log("clicked zoomout ");
     const newDayPixels = this.state.numPixelsPerDay - 10;
     if (newDayPixels >= 20) {
       this.setState({
@@ -117,11 +73,11 @@ export default class TimelineView extends React.Component {
       });
     }
   }
-  getDaysFromStart = (date) => date.diff(this.timelineStartDate, 'days');
-  
+  ////////////////////////////////////////////
+
   render() {
-    console.log("rendering");
-    // create date markers.
+    const numPixelsPerDay = this.state.numPixelsPerDay;
+    ///////// create date markers. /////////
     let dateToWrite = moment(Object.assign({}, this.timelineStartDate));
     let tics = [];
     let leftPixels = 0;
@@ -130,7 +86,7 @@ export default class TimelineView extends React.Component {
       if (dateToWrite.format("M") !== monthToWrite) {
         tics.push(
           <div className="tic"
-          style={{left: leftPixels, width: this.state.numPixelsPerDay}}>
+          style={{left: leftPixels, width: numPixelsPerDay}}>
                  {dateToWrite.format("MMM D")}
           </div>
         );
@@ -138,15 +94,17 @@ export default class TimelineView extends React.Component {
       } else {
         tics.push(
           <div className="tic"
-          style={{left: leftPixels, width: this.state.numPixelsPerDay}}>
+          style={{left: leftPixels, width: numPixelsPerDay}}>
                  {dateToWrite.format("D")}
           </div>
         );
       }
-      leftPixels += this.state.numPixelsPerDay;
+      leftPixels += numPixelsPerDay;
       dateToWrite = moment(dateToWrite).add(1, "days");
     }
-    // create rows.
+    ////////////////////////////////////
+
+    /////////// create rows. ///////////
     let rowsArray = this.getRows();
     let runs = rowsArray.map((row, i) => {
       let bgc = i % 2 === 0 ? "#ffffff" : "#9999997e";
@@ -156,14 +114,21 @@ export default class TimelineView extends React.Component {
         style={{
           gridRowStart: i+1, 
           backgroundColor: bgc, 
-          height: this.state.rowHeights[i],
           width: leftPixels}}
       >
-        {this.getBars(row, i)}
+        {
+        <Row 
+          timelineItems = {row}
+          numPixelsPerDay = {numPixelsPerDay}
+          rowIndex = {i}
+          startDate = {this.timelineStartDate}
+        />
+        }
       </div>)
     }
     );
-    
+    ////////////////////////////////////
+
     return (
       <div className="timeline">
         {tics}
