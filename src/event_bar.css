@@ -1,4 +1,5 @@
 .bar {
   background-color: aqua;
   border: 1px solid black;
+  overflow-wrap: break-word;
 }

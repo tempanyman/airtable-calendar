@@ -1,25 +1,40 @@
 import React from 'react';
 import moment from 'moment';
+import timelineItems from './timelineItems';
 import './timeline_view.css';
 import EventBar from './eventBar';
 
 export default class TimelineView extends React.Component {
   state = {
-    rowHeights: this.props.timelineItems.map(x => 0),
-    numPixelsPerDay: this.props.width || 100
+    rowHeights: timelineItems.map(x => 0),
+    numPixelsPerDay: this.props.width || 100,
+    idOfNameChange: -1,
+    timelineItems: timelineItems.map((item) => {
+      return ({
+        id: item.id,
+        start: moment(item.start, "YYYY-MM-DD"),
+        end: moment(item.end, "YYYY-MM-DD"),
+        span: moment(item.end, "YYYY-MM-DD").diff(moment(item.start, "YYYY-MM-DD"), 'days') + 1,
+        name: item.name
+      });
+    })
   }
   constructor(props) {
     super(props);
-    this.timelineItems = props.timelineItems;
-    // sort timeline items 
-    this.timelineSortedByStart = [...this.timelineItems];
+    // sort timeline items by start date
+    this.timelineSortedByStart = [...this.state.timelineItems];
     this.timelineSortedByStart.sort((item1, item2) => item1.start.diff(item2.start));
     this.timelineStartDate = this.timelineSortedByStart[0].start;
-    /////////////////
-    this.timelineSortedByEndDescending = [...this.timelineItems];
+    // sort timeline items by end date, descending
+    this.timelineSortedByEndDescending = [...this.state.timelineItems];
     this.timelineSortedByEndDescending.sort((item1, item2) => item2.end.diff(item1.end));
     this.timelineEndDate = this.timelineSortedByEndDescending[0].end;
+    // passing event handlers to EventBar; bind this keyword to handlers
+    this.eventBarKeyHandler = this.eventBarKeyHandler.bind(this);
+    this.eventBarFocusHandler = this.eventBarFocusHandler.bind(this);
   }
+
+
 
   componentDidMount() {
     let heights = this.state.rowHeights.map((h, index) => {
@@ -33,23 +48,21 @@ export default class TimelineView extends React.Component {
   }
 
   componentDidUpdate(prevProps, prevState) {
+    // Get the new heights of the bars and update the row heights accordingly.
+    /* Issue with current implementation: componentDidUpdate() fires when the outermost element inside 
+    the render() function is rendered, without waiting for the inner elements to finish rendering.
+    Thus this implementation grabs outdated heights. 
+    https://stackoverflow.com/questions/58339793/react-componentdidupdate-is-unable-to-find-dom-objects-rendered-by-the-rende*/
     let heights = this.state.rowHeights.map((h, index) => {
       let idName = "#eventInRow" + index;
       let nodeArr = [...document.querySelectorAll(idName)];
-      console.log("noderr = ", nodeArr);
-      let nodeaddlist = nodeArr.map((n) => n.clientHeight);
-      console.log("noderrlist = ", nodeaddlist);
-      let nodeArrMax = Math.max.apply(Math, nodeArr.map((node) => node.clientHeight));
       return Math.max.apply(Math, nodeArr.map((node) => node.clientHeight));
     });
-    console.log("old rowheights: " + this.state.rowHeights);
-    console.log("new heights: " + heights);
     if (JSON.stringify(this.state.rowHeights) !== JSON.stringify(heights)) {
       console.log("updating!")
       this.setState({
         rowHeights: heights
       });
-      //this.forceUpdate();
     }
   }
 
@@ -89,15 +102,19 @@ export default class TimelineView extends React.Component {
       return (
         <div className="event"
              id={"eventInRow" + rowIndex} 
-             style={{left: pixels}}>
+             style={{left: pixels}}
+             onDoubleClick={(e) => {this.showEditBox}}
+             >
                <EventBar numPixelsPerDay={this.state.numPixelsPerDay}
                          span={item.span}
-                         itemName={item.name}/>
+                         itemName={item.name}
+                         id={this.state.idOfNameChange}/>
         </div>
       );
     });
   }
-    
+  
+  // event handlers
   // onclick event for zoom.
   zoomIn = () => {
     console.log("clicked zoomin");
@@ -117,6 +134,33 @@ export default class TimelineView extends React.Component {
       });
     }
   }
+
+  // onDoubleClick event for changing event names.
+  showEditBox = () => {
+    this.setState({
+      editName: true
+    });
+  }
+  // change name on enter, exit on esc or onlosefocus
+  eventBarKeyHandler = (e) => {
+    if (e.key === "Enter") {
+      this.setState({
+        editName: false,
+        timelin
+      })
+    } else if (e.key === "Escape") {
+      this.setState({
+        editName: false
+      });
+    }
+  }
+  eventBarFocusHandler = () => {
+    this.setState({
+      editName: false
+    });
+  }
+
+  
   getDaysFromStart = (date) => date.diff(this.timelineStartDate, 'days');
   
   render() {
